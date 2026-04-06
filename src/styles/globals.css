@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  overflow-y: scroll;
+}
+
+@layer base {
+  :root {
+    --brand-dark-blue: 209 38% 21%;
+    --brand-blue: 210 82% 48%;
+    --brand-dark-gray: 0 0% 40%;
+    --brand-gray: 0 0% 74%;
+    --brand-light-gray: 0 0% 86%;
+    --brand-lightest-gray: 0 0% 95%;
+
+    --background: 0 0% 98.5%;
+    --foreground: 209 38% 21%;
+
+    --primary: 210 82% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 209 38% 21%;
+
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 0 0% 95%;
+    --accent-foreground: 209 38% 21%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 86%;
+    --input: 0 0% 86%;
+    --ring: 210 82% 48%;
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-brand-light-gray rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-gray;
+  }
+}
+
+@layer utilities {
+  .sidebar-width {
+    width: 240px;
+    min-width: 240px;
+  }
+  .content-area {
+    margin-left: 240px;
+  }
+}
