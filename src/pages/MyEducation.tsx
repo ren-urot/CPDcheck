@@ -1,5 +1,5 @@
 import React from "react";
-import { completedEducation, cpdCategories } from "../data/categories";
+import { cpdCategories } from "../data/categories";
 import { cn } from "../lib/utils";
 import { Headphones, FileText, Monitor, BookOpen, Clock, CheckCircle2 } from "lucide-react";
 import type { CompletedEducationItem, ContentType } from "../types";
@@ -21,12 +21,13 @@ const typeConfig: Partial<Record<ContentType, TypeConfigEntry>> = {
 
 interface MyEducationProps {
   onSelectContent?: (item: CompletedEducationItem) => void;
+  items: CompletedEducationItem[];
 }
 
-export function MyEducation({ onSelectContent }: MyEducationProps) {
-  const totalPoints = completedEducation.reduce((s, i) => s + i.cpdPoints, 0);
-  const totalHours = Math.floor(completedEducation.reduce((s, i) => s + i.duration, 0) / 60);
-  const totalMins = completedEducation.reduce((s, i) => s + i.duration, 0) % 60;
+export function MyEducation({ onSelectContent, items }: MyEducationProps) {
+  const totalPoints = items.reduce((s, i) => s + i.cpdPoints, 0);
+  const totalHours = Math.floor(items.reduce((s, i) => s + i.duration, 0) / 60);
+  const totalMins = items.reduce((s, i) => s + i.duration, 0) % 60;
 
   return (
     <div className="space-y-4">
@@ -37,7 +38,7 @@ export function MyEducation({ onSelectContent }: MyEducationProps) {
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Activities Completed", value: completedEducation.length },
+          { label: "Activities Completed", value: items.length },
           { label: "Total CPD Points",     value: `${totalPoints.toFixed(2)} pts` },
           { label: "Total Time",           value: `${totalHours}h ${totalMins}m` },
         ].map((stat) => (
@@ -49,7 +50,7 @@ export function MyEducation({ onSelectContent }: MyEducationProps) {
       </div>
 
       <div className="space-y-3">
-        {completedEducation.map((item) => {
+        {items.map((item) => {
           const tc = typeConfig[item.type] ?? typeConfig.text!;
           const Icon = tc.Icon;
           return (

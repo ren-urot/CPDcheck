@@ -8,6 +8,7 @@ export type PageId =
   | "results"
   | "reporting"
   | "myEducation"
+  | "completedDetail"
   | "profile"
   | "upload";
 
