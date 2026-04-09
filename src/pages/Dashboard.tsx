@@ -108,21 +108,50 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
     Object.fromEntries(cpdCategories.map(c => [c.id, c.id !== "general"]))
   );
   const [showImport, setShowImport] = useState(false);
-  const [importTab, setImportTab] = useState<"manual" | "paste" | "csv">("manual");
+  const [importTab, setImportTab] = useState<"auto" | "manual">("auto");
   const [importForm, setImportForm] = useState({
     activityTitle: "", activityType: "", provider: "", description: "",
     cpdType: "" as string, day: "",
     cpdArea: "", hoursAllocated: "", totalHours: "", notes: "", pdfFile: null as File | null,
   });
   const [extraAreas, setExtraAreas] = useState<{area: string; hours: string}[]>([]);
-  const [importPaste, setImportPaste] = useState("");
-  const [importCsvFile, setImportCsvFile] = useState<File | null>(null);
+  const [autoPdfFile, setAutoPdfFile] = useState<File | null>(null);
+  const [autoProcessing, setAutoProcessing] = useState(false);
   const [importPreview, setImportPreview] = useState<CompletedEducationItem[] | null>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
+  const autoPdfRef = useRef<HTMLInputElement>(null);
 
   const MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const CSV_HINT = `Title,Provider,Activity Type,CPD Area,Hours,Completion Date,Notes\nFASEA Ethics Module,FPA Australia,Structured CPD,Professionalism & Ethics,1.5,28/08/2025,Optional notes`;
+
+  function handleAutoPdfSelect(file: File) {
+    setAutoPdfFile(file);
+    setAutoProcessing(true);
+    setImportPreview(null);
+    setTimeout(() => {
+      const raw = file.name
+        .replace(/\.pdf$/i, "")
+        .replace(/[-_]/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      const title = raw.replace(/\b\w/g, c => c.toUpperCase()).trim() || "Imported Certificate";
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
+      setImportForm(f => ({
+        ...f,
+        activityTitle: title,
+        activityType: "Structured CPD",
+        provider: "External",
+        description: "",
+        day: todayStr,
+        hoursAllocated: "1",
+        cpdArea: "",
+        notes: "",
+        pdfFile: file,
+      }));
+      setImportPreview([{ id: "auto", title, subtitle: "", description: "", provider: "External", type: "pdf", duration: 60, cpdPoints: 1, completedDate: "", status: "completed", categories: [], isImported: true }]);
+      setAutoProcessing(false);
+    }, 1200);
+  }
 
   function activityToContentType(t: string): ContentType {
     const lower = t.toLowerCase();
@@ -160,61 +189,62 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
     };
   }
 
-  function parseCSVLine(line: string): string[] {
+  function parseCSVLine(line: string, delimiter = ","): string[] {
     const result: string[] = [];
     let current = "";
     let inQuotes = false;
     for (const ch of line) {
       if (ch === '"') { inQuotes = !inQuotes; }
-      else if (ch === "," && !inQuotes) { result.push(current.trim()); current = ""; }
+      else if (ch === delimiter && !inQuotes) { result.push(current.trim()); current = ""; }
       else { current += ch; }
     }
     result.push(current.trim());
     return result;
   }
 
+  function detectDelimiter(line: string): string {
+    const tabs = (line.match(/\t/g) || []).length;
+    const commas = (line.match(/,/g) || []).length;
+    return tabs > commas ? "\t" : ",";
+  }
+
   function parseCSVText(text: string): CompletedEducationItem[] {
     const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
     if (lines.length === 0) return [];
-    const firstCols = parseCSVLine(lines[0]);
-    const isHeader = firstCols[0].toLowerCase().includes("title") || firstCols[0].toLowerCase().includes("activity");
-    const dataLines = isHeader ? lines.slice(1) : lines;
-    return dataLines.map((line, i) => {
-      const cols = parseCSVLine(line);
-      const [title = "", provider = "", actType = "", cpdArea = "", hoursStr = "", dateStr = "", notes = ""] = cols;
-      const hours = parseFloat(hoursStr) || 0;
-      let completedDate = dateStr;
-      const dm = dateStr.match(/(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
-      if (dm) completedDate = `${parseInt(dm[1])} ${MONTHS_LONG[parseInt(dm[2]) - 1] ?? ""} ${dm[3]}`.trim();
-      return {
-        id: `import-csv-${Date.now()}-${i}`,
-        title: title || "Untitled",
-        subtitle: notes || actType || "",
-        description: notes || title || "",
-        provider: provider || "External",
-        type: activityToContentType(actType),
-        duration: Math.round(hours * 60),
-        cpdPoints: hours,
-        completedDate,
-        status: "completed" as const,
-        categories: cpdArea ? [{ name: cpdArea, pts: hours }] : [],
-        isImported: true,
-      };
-    }).filter(item => item.title !== "Untitled" || item.cpdPoints > 0);
+    const delimiter = detectDelimiter(lines[0]);
+    const firstCols = parseCSVLine(lines[0], delimiter);
+    const isHeader = firstCols[0].toLowerCase().replace(/[^a-z]/g, "").includes("title") ||
+                     firstCols[0].toLowerCase().includes("activity") ||
+                     firstCols[0].toLowerCase().includes("provider");
+    const dataLines = isHeader && lines.length > 1 ? lines.slice(1) : lines;
+    return dataLines
+      .filter(line => line.replace(/,|\t/g, "").trim().length > 0)
+      .map((line, i) => {
+        const cols = parseCSVLine(line, delimiter);
+        const [title = "", provider = "", actType = "", cpdArea = "", hoursStr = "", dateStr = "", notes = ""] = cols;
+        const hours = parseFloat(hoursStr) || 0;
+        let completedDate = dateStr.trim();
+        const dm = completedDate.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (dm) completedDate = `${parseInt(dm[1])} ${MONTHS_LONG[parseInt(dm[2]) - 1] ?? ""} ${dm[3]}`.trim();
+        return {
+          id: `import-csv-${Date.now()}-${i}`,
+          title: title.trim() || `Entry ${i + 1}`,
+          subtitle: notes.trim() || actType.trim() || "",
+          description: notes.trim() || title.trim() || "",
+          provider: provider.trim() || "External",
+          type: activityToContentType(actType),
+          duration: Math.round(hours * 60),
+          cpdPoints: hours,
+          completedDate: completedDate || "Unknown",
+          status: "completed" as const,
+          categories: cpdArea.trim() ? [{ name: cpdArea.trim(), pts: hours }] : [],
+          isImported: true,
+        };
+      });
   }
 
   function handleModalPreview() {
-    if (importTab === "manual") {
-      setImportPreview([importFormToItem()]);
-    } else if (importTab === "paste") {
-      setImportPreview(parseCSVText(importPaste));
-    }
-  }
-
-  async function handleCsvPreview() {
-    if (!importCsvFile) return;
-    const text = await importCsvFile.text();
-    setImportPreview(parseCSVText(text));
+    setImportPreview([importFormToItem()]);
   }
 
   function handleImportConfirm() {
@@ -223,13 +253,19 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
     closeModal();
   }
 
+  function handleFormSubmit() {
+    const item = importFormToItem();
+    onAddItems?.([item]);
+    closeModal();
+  }
+
   function closeModal() {
     setShowImport(false);
-    setImportTab("manual");
+    setImportTab("auto");
     setImportForm({ activityTitle: "", activityType: "", provider: "", description: "", cpdType: "", day: "", cpdArea: "", hoursAllocated: "", totalHours: "", notes: "", pdfFile: null });
     setExtraAreas([]);
-    setImportPaste("");
-    setImportCsvFile(null);
+    setAutoPdfFile(null);
+    setAutoProcessing(false);
     setImportPreview(null);
   }
 
@@ -457,13 +493,12 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
 
           {/* Tabs */}
           <div className="flex gap-1 px-6 pt-4 shrink-0">
-            {([["manual", "Manual Entry"], ["paste", "Paste CSV"], ["csv", "Upload CSV"]] as const).map(([key, label]) => (
-              <button key={key} onClick={() => { setImportTab(key); setImportPreview(null); }}
+            {([["auto", "Automatic Entry"], ["manual", "Manual Entry"]] as const).map(([key, label]) => (
+              <button key={key} onClick={() => { setImportTab(key); setImportPreview(null); setAutoPdfFile(null); setAutoProcessing(false); }}
                 className={cn("flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors",
                   importTab === key ? "bg-[#1182E3] text-white" : "bg-gray-100 text-foreground hover:bg-gray-200")}>
+                {key === "auto" && <FileSpreadsheet size={13} />}
                 {key === "manual" && <ClipboardList size={13} />}
-                {key === "paste" && <FileText size={13} />}
-                {key === "csv" && <FileSpreadsheet size={13} />}
                 {label}
               </button>
             ))}
@@ -472,8 +507,117 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
           {/* Body */}
           <div className="overflow-y-auto flex-1 px-6 py-5">
 
-            {/* ── Manual Entry ── */}
-            {importTab === "manual" && (
+            {/* ── Manual Entry — preview (read-only) ── */}
+            {importTab === "manual" && importPreview && importPreview.length > 0 && (
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left */}
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CPD Activity Details</p>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Activity Title</label>
+                    <input readOnly value={importForm.activityTitle} placeholder="Activity Title"
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Activity Type</label>
+                    <div className="relative">
+                      <select disabled value={importForm.activityType}
+                        className="w-full appearance-none rounded-lg border border-border pl-3 pr-9 py-2 text-sm bg-white outline-none">
+                        <option value="">Select Activity Type...</option>
+                        <option>Structured CPD</option><option>Unstructured CPD</option>
+                        <option>Conference</option><option>Self-directed</option>
+                        <option>Relevant Qualification</option><option>Professional Reading (max 4 hours)</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-[10px] flex items-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Facilitator / Provider</label>
+                    <input readOnly value={importForm.provider} placeholder="Facilitator/Provider"
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Brief Description (Optional)</label>
+                    <textarea readOnly value={importForm.description} placeholder="Learning format, delivery method…" rows={3}
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none resize-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-foreground">Type of CPD Undertaken</label>
+                    <div className="flex flex-wrap gap-2">
+                      {["Non-Ensombl Entity", "Relevant Qualification", "Professional Reading (max 4 hours)"].map(t => (
+                        <span key={t} className={cn("text-xs px-3 py-1.5 rounded-full border font-medium",
+                          importForm.cpdType === t ? "bg-[#1182E3] text-white border-[#1182E3]" : "border-border text-foreground")}>
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {/* Right */}
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Accreditation &amp; Dates</p>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Date of Completion</label>
+                    <input readOnly type="text" value={importForm.day}
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none" />
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hours and Categories</p>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-foreground">CPD Area</label>
+                      <div className="relative">
+                        <select disabled value={importForm.cpdArea}
+                          className="w-full appearance-none rounded-lg border border-border pl-3 pr-9 py-2 text-sm bg-white outline-none">
+                          <option value="">Select a Category...</option>
+                          {contentCategories.filter(c => c !== "All").map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-[10px] flex items-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-foreground">Hours Allocated</label>
+                      <input readOnly value={importForm.hoursAllocated} placeholder="Hours"
+                        className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none" />
+                    </div>
+                    {extraAreas.filter(e => e.area).map((ea, i) => (
+                      <div key={i} className="grid grid-cols-2 gap-2">
+                        <input readOnly value={ea.area} className="rounded-lg border border-border px-2 py-2 text-sm outline-none" />
+                        <input readOnly value={ea.hours} className="rounded-lg border border-border px-2 py-2 text-sm outline-none" />
+                      </div>
+                    ))}
+                    <span className="flex items-center gap-1 text-xs text-[#1182E3] font-medium opacity-40 cursor-default select-none">
+                      <Plus size={12} /> Add more
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Extra Notes</label>
+                    <textarea readOnly value={importForm.notes} placeholder="Any additional information..." rows={2}
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none resize-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">Upload Certificate (PDF)</label>
+                    {importForm.pdfFile ? (
+                      <div className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-xs">
+                        <FileText size={16} className="text-red-500 shrink-0" />
+                        <span className="flex-1 text-foreground font-medium truncate">{importForm.pdfFile.name}</span>
+                      </div>
+                    ) : (
+                      <div className="w-full flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-6">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                          <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+                          <path d="M12 12v9"/><path d="m16 16-4-4-4 4"/>
+                        </svg>
+                        <span className="text-xs text-muted-foreground">PDF format, up to 10 MB</span>
+                        <span className="px-4 py-1.5 rounded-xl border border-border bg-white text-xs font-medium text-foreground shadow-sm opacity-50">Browse File</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Manual Entry form / Auto Entry editable preview ── */}
+            {((importTab === "manual" && !importPreview) || (importTab === "auto" && !!importPreview)) && (
               <div className="grid grid-cols-2 gap-6">
                 {/* Left */}
                 <div className="space-y-4">
@@ -600,54 +744,42 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
               </div>
             )}
 
-            {/* ── Paste CSV ── */}
-            {importTab === "paste" && (
+            {/* ── Automatic Entry ── */}
+            {importTab === "auto" && !importPreview && !autoProcessing && (
               <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">Paste rows in CSV format. An optional header row is supported.</p>
-                <div className="rounded-md bg-gray-50 border border-border px-3 py-2">
-                  <code className="text-xs text-muted-foreground whitespace-pre-wrap break-all">{CSV_HINT}</code>
-                </div>
-                <textarea rows={10} placeholder={CSV_HINT} value={importPaste}
-                  onChange={e => { setImportPaste(e.target.value); setImportPreview(null); }}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1182E3]/30 focus:border-[#1182E3] resize-none font-mono" />
-              </div>
-            )}
-
-            {/* ── Upload CSV ── */}
-            {importTab === "csv" && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">Upload a .csv file with columns: Title, Provider, Activity Type, CPD Area, Hours, Completion Date, Notes.</p>
-                <div className="rounded-md bg-gray-50 border border-border px-3 py-2">
-                  <code className="text-xs text-muted-foreground whitespace-pre-wrap break-all">{CSV_HINT}</code>
-                </div>
-                <input ref={csvInputRef} type="file" accept=".csv" className="hidden"
-                  onChange={e => { setImportCsvFile(e.target.files?.[0] ?? null); setImportPreview(null); }} />
-                {importCsvFile ? (
+                <p className="text-xs text-muted-foreground">Upload your CPD certificate PDF and we'll automatically generate an entry for review.</p>
+                <input ref={autoPdfRef} type="file" accept=".pdf" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleAutoPdfSelect(f); }} />
+                {autoPdfFile ? (
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-gray-50 px-4 py-3 text-xs">
-                    <FileSpreadsheet size={16} className="text-green-600 shrink-0" />
-                    <span className="flex-1 text-foreground font-medium truncate">{importCsvFile.name}</span>
-                    <button type="button" onClick={() => csvInputRef.current?.click()} className="text-[#1182E3] hover:underline shrink-0">Change</button>
-                    <button type="button" onClick={() => { setImportCsvFile(null); setImportPreview(null); if (csvInputRef.current) csvInputRef.current.value = ""; }} className="text-red-500 hover:underline shrink-0">Remove</button>
+                    <FileText size={16} className="text-red-500 shrink-0" />
+                    <span className="flex-1 text-foreground font-medium truncate">{autoPdfFile.name}</span>
+                    <button type="button" onClick={() => { setAutoPdfFile(null); setImportPreview(null); if (autoPdfRef.current) autoPdfRef.current.value = ""; }} className="text-red-500 hover:underline shrink-0">Remove</button>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => csvInputRef.current?.click()}
-                    className="w-full flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors px-4 py-10">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                  <button type="button" onClick={() => autoPdfRef.current?.click()}
+                    className="w-full flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors px-4 py-12">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
                       <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
-                      <path d="M12 12v9"/>
-                      <path d="m16 16-4-4-4 4"/>
+                      <path d="M12 12v9"/><path d="m16 16-4-4-4 4"/>
                     </svg>
-                    <span className="text-xs text-muted-foreground">CSV format, up to 10 MB</span>
-                    <span className="px-4 py-1.5 rounded-xl border border-border bg-white text-xs font-medium text-foreground shadow-sm">
-                      Browse File
-                    </span>
+                    <span className="text-xs text-muted-foreground">PDF format, up to 10 MB</span>
+                    <span className="px-4 py-1.5 rounded-xl border border-border bg-white text-xs font-medium text-foreground shadow-sm">Browse File</span>
                   </button>
                 )}
               </div>
             )}
 
-            {/* ── Preview panel ── */}
-            {importPreview !== null && (
+            {/* ── Auto processing spinner ── */}
+            {importTab === "auto" && autoProcessing && (
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="h-10 w-10 rounded-full border-4 border-[#1182E3]/20 border-t-[#1182E3] animate-spin" />
+                <p className="text-sm text-muted-foreground">Analysing document…</p>
+              </div>
+            )}
+
+            {/* ── Preview panel (card style — not used for manual/auto) ── */}
+            {importPreview !== null && importTab !== "manual" && importTab !== "auto" && (
               <div className="mt-4 space-y-3">
                 <div className="border-t border-border pt-4">
                   {importPreview.length > 0 ? (
@@ -698,7 +830,11 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm text-red-500">No valid entries found. Check your data format.</p>
+                    <div className="space-y-2">
+                      <p className="text-sm text-red-500 font-medium">No entries could be parsed. Make sure your data has at least a title column.</p>
+                      <p className="text-xs text-muted-foreground">Expected format (comma or tab separated):</p>
+                      <code className="block text-xs bg-gray-50 border border-border rounded-lg px-3 py-2 whitespace-pre-wrap break-all text-muted-foreground">{"Title,Provider,Activity Type,CPD Area,Hours,Completion Date,Notes"}</code>
+                    </div>
                   )}
                 </div>
               </div>
@@ -709,24 +845,28 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
           <div className="flex items-center gap-3 px-6 py-4 border-t border-border shrink-0">
             {importPreview && importPreview.length > 0 ? (
               <>
-                <button onClick={handleImportConfirm}
+                <button onClick={handleFormSubmit}
                   className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#1182E3] text-white text-sm font-semibold hover:bg-blue-600 transition-colors">
-                  <CheckCircle2 size={15} />
-                  Confirm &amp; Submit {importPreview.length > 1 ? `${importPreview.length} Entries` : "Entry"}
+                  <CheckCircle2 size={15} /> Save and Submit
                 </button>
-                <button onClick={() => setImportPreview(null)}
+                <button onClick={() => { setImportPreview(null); setImportForm(f => ({...f, activityTitle:"", activityType:"", provider:"", description:"", day:"", hoursAllocated:"", notes:"", pdfFile: null})); if (importTab === "auto") { setAutoPdfFile(null); if (autoPdfRef.current) autoPdfRef.current.value = ""; } }}
                   className="px-5 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-gray-50 transition-colors">
                   Back
                 </button>
               </>
             ) : (
               <>
-                <button
-                  onClick={importTab === "csv" ? handleCsvPreview : handleModalPreview}
-                  disabled={importTab === "paste" && !importPaste.trim()}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#1182E3] text-white text-sm font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Eye size={15} /> Preview
-                </button>
+                {importTab === "manual" && (
+                  <button onClick={handleModalPreview}
+                    className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#1182E3] text-white text-sm font-semibold hover:bg-blue-600 transition-colors">
+                    <Eye size={15} /> Preview
+                  </button>
+                )}
+                {importTab === "auto" && !autoProcessing && (
+                  <button disabled className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gray-100 text-muted-foreground text-sm font-semibold cursor-not-allowed">
+                    Upload a PDF to continue
+                  </button>
+                )}
                 <button onClick={closeModal}
                   className="px-5 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-gray-50 transition-colors">
                   Discard Changes
