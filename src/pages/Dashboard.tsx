@@ -451,7 +451,7 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
                     {cpdCategories.map(cat => {
                       const active = item.categories.some(c => c.name === cat.shortLabel || c.name === cat.label);
                       return (
-                        <span key={cat.id} className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium border whitespace-nowrap",
+                        <span key={cat.id} className={cn("text-[9px] px-2 pt-1 pb-0.5 rounded-full font-medium border whitespace-nowrap",
                           active ? "bg-teal-50 text-teal-600 border-teal-200" : "bg-transparent text-gray-400 border-gray-200")}>
                           {cat.shortLabel}
                         </span>
@@ -459,8 +459,8 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
                     })}
                   </div>
                   <div className="flex flex-nowrap overflow-hidden gap-1.5">
-                    {subCategories.filter(s => ["social-security", "derivatives", "financial-plan", "aged-care", "retirement-inc", "smsf"].includes(s.id)).map(sub => (
-                      <span key={sub.id} className="shrink-0 text-[10px] px-2.5 py-0.5 rounded-full font-medium bg-cyan-100 text-cyan-600">
+                    {subCategories.filter(s => ["social-security", "derivatives", "financial-plan", "aged-care", "retirement-inc", "smsf", "life-insurance", "skills"].includes(s.id)).map(sub => (
+                      <span key={sub.id} className="shrink-0 text-[9px] px-2 pt-1 pb-0.5 rounded-full font-medium bg-cyan-100 text-cyan-600">
                         {sub.label}
                       </span>
                     ))}

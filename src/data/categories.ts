@@ -28,7 +28,7 @@ export const cpdCategories: CpdCategory[] = [
   {
     id: "regulatory",
     label: "Regulatory Compliance & Consumer Protection",
-    shortLabel: "Regulatory Compliance",
+    shortLabel: "Regulatory Compliance & Consumer Protection",
     earned: 0,
     target: 5,
     color: "#F59E0B",
