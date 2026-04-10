@@ -68,7 +68,7 @@ export function MyEducation({ onSelectContent, items }: MyEducationProps) {
                 <p className="text-xs text-muted-foreground leading-tight mt-2">{item.subtitle}</p>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {cpdCategories.map((cat) => {
-                    const active = item.categories.some((c) => c.name === cat.shortLabel);
+                    const active = item.categories.some((c) => c.name === cat.shortLabel || c.name === cat.label);
                     return (
                       <span key={cat.id} className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", active ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400")}>
                         {cat.shortLabel}

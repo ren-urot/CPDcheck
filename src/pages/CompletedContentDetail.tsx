@@ -195,8 +195,8 @@ export function CompletedContentDetail({ item, onBack }: CompletedContentDetailP
                 <Pencil size={14} />
               </button>
             </div>
-            <p className="text-[13px] text-muted-foreground mt-1">
-              Combine Assessment - AR Allocated
+            <p className="text-[14px] font-semibold mt-1" style={{color: "#1182E3"}}>
+              External Assessment - Certificate
             </p>
           </div>
           <button className="flex items-center gap-2 shrink-0 text-[13px] text-muted-foreground hover:text-foreground transition-colors">
@@ -328,22 +328,6 @@ export function CompletedContentDetail({ item, onBack }: CompletedContentDetailP
             </button>
           </div>
         ))}
-      </div>
-
-      {/* ── Assessment Reasoning blog cards ─────────────────────────────────── */}
-      <div className="rounded-2xl border border-[#e2e2e2] bg-white overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#f0f0f0]">
-          <p className="font-semibold text-sm">Assessment Reasoning</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Why this content qualifies for CPD credit</p>
-        </div>
-        <div className="grid grid-cols-2 divide-x divide-[#f0f0f0]">
-          {ASSESSMENT_REASONS.map((reason, i) => (
-            <div key={i} className={cn("p-5 space-y-2", i >= 2 && "border-t border-[#f0f0f0]")}>
-              <SoftBadge label={reason.badge} />
-              <p className="text-xs text-muted-foreground leading-relaxed">{reason.text}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* ── CPD Category Assessment cards (2-col × 3 rows) ──────────────────── */}

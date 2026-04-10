@@ -447,11 +447,11 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
                 <div className="flex-1 min-w-0 px-4 py-3 space-y-1.5">
                   <p className="text-sm font-semibold leading-snug">{item.title}</p>
                   <p className="text-xs text-muted-foreground">{item.subtitle}</p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-nowrap gap-1">
                     {cpdCategories.map(cat => {
-                      const active = item.categories.some(c => c.name === cat.shortLabel);
+                      const active = item.categories.some(c => c.name === cat.shortLabel || c.name === cat.label);
                       return (
-                        <span key={cat.id} className={cn("text-[10px] px-2.5 py-0.5 rounded-full font-medium border",
+                        <span key={cat.id} className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium border whitespace-nowrap",
                           active ? "bg-teal-50 text-teal-600 border-teal-200" : "bg-transparent text-gray-400 border-gray-200")}>
                           {cat.shortLabel}
                         </span>
