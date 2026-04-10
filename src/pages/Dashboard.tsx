@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import type { ComponentType } from "react";
 import { cpdCategories, subCategories, completedEducation, ANNUAL_CPD_TARGET } from "../data/categories";
 import { cn } from "../lib/utils";
-import { Headphones, FileText, Monitor, BookOpen, BookOpenCheck, X, Plus, Eye, CheckCircle2, Clock, ClipboardList, FileSpreadsheet } from "lucide-react";
+import { Headphones, FileText, Monitor, BookOpen, BookOpenCheck, X, Plus, CheckCircle2, Clock, ClipboardList, FileSpreadsheet } from "lucide-react";
 import { categories as contentCategories } from "../data/content";
 import type { CompletedEducationItem, ContentType, PageId } from "../types";
 import { generateUserGuide } from "../utils/generateUserGuide";
@@ -486,13 +486,13 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">
             <h2 className="text-base font-bold text-foreground">Import CPD points</h2>
             <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors"><X size={18} /></button>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 px-6 pt-4 shrink-0">
+          <div className="flex gap-1 px-6 pt-2 shrink-0">
             {([["auto", "Automatic Entry"], ["manual", "Manual Entry"]] as const).map(([key, label]) => (
               <button key={key} onClick={() => { setImportTab(key); setImportPreview(null); setAutoPdfFile(null); setAutoProcessing(false); }}
                 className={cn("flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors",
@@ -505,122 +505,13 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
           </div>
 
           {/* Body */}
-          <div className="overflow-y-auto flex-1 px-6 py-5">
-
-            {/* ── Manual Entry — preview (read-only) ── */}
-            {importTab === "manual" && importPreview && importPreview.length > 0 && (
-              <div className="grid grid-cols-2 gap-6">
-                {/* Left */}
-                <div className="space-y-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CPD Activity Details</p>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Activity Title</label>
-                    <input readOnly value={importForm.activityTitle} placeholder="Activity Title"
-                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Activity Type</label>
-                    <div className="relative">
-                      <select disabled value={importForm.activityType}
-                        className="w-full appearance-none rounded-lg border border-border pl-3 pr-9 py-2 text-sm bg-white outline-none">
-                        <option value="">Select Activity Type...</option>
-                        <option>Structured CPD</option><option>Unstructured CPD</option>
-                        <option>Conference</option><option>Self-directed</option>
-                        <option>Relevant Qualification</option><option>Professional Reading (max 4 hours)</option>
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-[10px] flex items-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Facilitator / Provider</label>
-                    <input readOnly value={importForm.provider} placeholder="Facilitator/Provider"
-                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Brief Description (Optional)</label>
-                    <textarea readOnly value={importForm.description} placeholder="Learning format, delivery method…" rows={3}
-                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none resize-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-foreground">Type of CPD Undertaken</label>
-                    <div className="flex flex-wrap gap-2">
-                      {["Non-Ensombl Entity", "Relevant Qualification", "Professional Reading (max 4 hours)"].map(t => (
-                        <span key={t} className={cn("text-xs px-3 py-1.5 rounded-full border font-medium",
-                          importForm.cpdType === t ? "bg-[#1182E3] text-white border-[#1182E3]" : "border-border text-foreground")}>
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                {/* Right */}
-                <div className="space-y-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Accreditation &amp; Dates</p>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Date of Completion</label>
-                    <input readOnly type="text" value={importForm.day}
-                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none" />
-                  </div>
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hours and Categories</p>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-foreground">CPD Area</label>
-                      <div className="relative">
-                        <select disabled value={importForm.cpdArea}
-                          className="w-full appearance-none rounded-lg border border-border pl-3 pr-9 py-2 text-sm bg-white outline-none">
-                          <option value="">Select a Category...</option>
-                          {contentCategories.filter(c => c !== "All").map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-[10px] flex items-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-foreground">Hours Allocated</label>
-                      <input readOnly value={importForm.hoursAllocated} placeholder="Hours"
-                        className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none" />
-                    </div>
-                    {extraAreas.filter(e => e.area).map((ea, i) => (
-                      <div key={i} className="grid grid-cols-2 gap-2">
-                        <input readOnly value={ea.area} className="rounded-lg border border-border px-2 py-2 text-sm outline-none" />
-                        <input readOnly value={ea.hours} className="rounded-lg border border-border px-2 py-2 text-sm outline-none" />
-                      </div>
-                    ))}
-                    <span className="flex items-center gap-1 text-xs text-[#1182E3] font-medium opacity-40 cursor-default select-none">
-                      <Plus size={12} /> Add more
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Extra Notes</label>
-                    <textarea readOnly value={importForm.notes} placeholder="Any additional information..." rows={2}
-                      className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none resize-none" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Upload Certificate (PDF)</label>
-                    {importForm.pdfFile ? (
-                      <div className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-xs">
-                        <FileText size={16} className="text-red-500 shrink-0" />
-                        <span className="flex-1 text-foreground font-medium truncate">{importForm.pdfFile.name}</span>
-                      </div>
-                    ) : (
-                      <div className="w-full flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-6">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-                          <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
-                          <path d="M12 12v9"/><path d="m16 16-4-4-4 4"/>
-                        </svg>
-                        <span className="text-xs text-muted-foreground">PDF format, up to 10 MB</span>
-                        <span className="px-4 py-1.5 rounded-xl border border-border bg-white text-xs font-medium text-foreground shadow-sm opacity-50">Browse File</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="overflow-y-auto flex-1 px-6 py-3">
 
             {/* ── Manual Entry form / Auto Entry editable preview ── */}
-            {((importTab === "manual" && !importPreview) || (importTab === "auto" && !!importPreview)) && (
-              <div className="grid grid-cols-2 gap-6">
+            {(importTab === "manual" || (importTab === "auto" && !!importPreview)) && (
+              <div className="grid grid-cols-2 gap-4">
                 {/* Left */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CPD Activity Details</p>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Activity Title</label>
@@ -651,7 +542,7 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Brief Description (Optional)</label>
                     <textarea value={importForm.description} onChange={e => setImportForm(f => ({...f, description: e.target.value}))}
-                      placeholder="Learning format, delivery method…" rows={3}
+                      placeholder="Learning format, delivery method…" rows={2}
                       className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1182E3]/30 focus:border-[#1182E3] resize-none" />
                   </div>
                   <div className="space-y-2">
@@ -668,14 +559,14 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
                   </div>
                 </div>
                 {/* Right */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Accreditation &amp; Dates</p>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Date of Completion</label>
                     <input type="date" value={importForm.day} onChange={e => setImportForm(f => ({...f, day: e.target.value}))}
                       className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1182E3]/30 focus:border-[#1182E3]" />
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hours and Categories</p>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-foreground">CPD Area</label>
@@ -709,10 +600,18 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
                       <Plus size={12} /> Add more
                     </button>
                   </div>
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Total Hours Breakdown</p>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-foreground">Total Accredited Hours (Mandatory)</label>
+                      <input type="number" value={importForm.totalHours} onChange={e => setImportForm(f => ({...f, totalHours: e.target.value}))}
+                        placeholder="0" className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1182E3]/30 focus:border-[#1182E3]" />
+                    </div>
+                  </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Extra Notes</label>
                     <textarea value={importForm.notes} onChange={e => setImportForm(f => ({...f, notes: e.target.value}))}
-                      placeholder="Any additional information..." rows={2}
+                      placeholder="Any additional information..." rows={1}
                       className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1182E3]/30 focus:border-[#1182E3] resize-none" />
                   </div>
                   <div className="space-y-1">
@@ -727,8 +626,8 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
                       </div>
                     ) : (
                       <button type="button" onClick={() => pdfRef.current?.click()}
-                        className="w-full flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors px-4 py-6">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                        className="w-full flex flex-col items-center gap-1 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors px-4 py-3">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
                           <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
                           <path d="M12 12v9"/>
                           <path d="m16 16-4-4-4 4"/>
@@ -842,26 +741,31 @@ export function Dashboard({ onSelectContent, items: propItems, onAddItems }: Das
           </div>
 
           {/* Footer */}
-          <div className="flex items-center gap-3 px-6 py-4 border-t border-border shrink-0">
-            {importPreview && importPreview.length > 0 ? (
+          <div className="flex items-center gap-3 px-6 py-3 border-t border-border shrink-0">
+            {importTab === "manual" ? (
               <>
                 <button onClick={handleFormSubmit}
                   className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#1182E3] text-white text-sm font-semibold hover:bg-blue-600 transition-colors">
                   <CheckCircle2 size={15} /> Save and Submit
                 </button>
-                <button onClick={() => { setImportPreview(null); setImportForm(f => ({...f, activityTitle:"", activityType:"", provider:"", description:"", day:"", hoursAllocated:"", notes:"", pdfFile: null})); if (importTab === "auto") { setAutoPdfFile(null); if (autoPdfRef.current) autoPdfRef.current.value = ""; } }}
+                <button onClick={closeModal}
+                  className="px-5 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-gray-50 transition-colors">
+                  Discard Changes
+                </button>
+              </>
+            ) : importPreview && importPreview.length > 0 ? (
+              <>
+                <button onClick={handleFormSubmit}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#1182E3] text-white text-sm font-semibold hover:bg-blue-600 transition-colors">
+                  <CheckCircle2 size={15} /> Save and Submit
+                </button>
+                <button onClick={() => { setImportPreview(null); setAutoPdfFile(null); if (autoPdfRef.current) autoPdfRef.current.value = ""; }}
                   className="px-5 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-gray-50 transition-colors">
                   Back
                 </button>
               </>
             ) : (
               <>
-                {importTab === "manual" && (
-                  <button onClick={handleModalPreview}
-                    className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#1182E3] text-white text-sm font-semibold hover:bg-blue-600 transition-colors">
-                    <Eye size={15} /> Preview
-                  </button>
-                )}
                 {importTab === "auto" && !autoProcessing && (
                   <button disabled className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gray-100 text-muted-foreground text-sm font-semibold cursor-not-allowed">
                     Upload a PDF to continue
