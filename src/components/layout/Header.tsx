@@ -7,14 +7,16 @@ interface PageConfig {
 }
 
 const pageConfig: Record<string, PageConfig> = {
-  dashboard:  { label: "Dashboard",        parent: null },
-  library:    { label: "CPD Library",       parent: null },
-  content:    { label: "Content Details",   parent: { id: "library", label: "CPD Library" } },
-  quiz:       { label: "Assessment",        parent: { id: "library", label: "CPD Library" } },
-  results:    { label: "Results",           parent: { id: "library", label: "CPD Library" } },
-  reporting:  { label: "CPD Reporting",     parent: null },
-  profile:    { label: "Account Settings",  parent: null },
-  upload:     { label: "Upload CPD",        parent: null },
+  dashboard:       { label: "Dashboard",              parent: null },
+  library:         { label: "CPD Library",             parent: null },
+  content:         { label: "Content Details",         parent: { id: "library",     label: "CPD Library"           } },
+  quiz:            { label: "Assessment",              parent: { id: "library",     label: "CPD Library"           } },
+  results:         { label: "Results",                 parent: { id: "library",     label: "CPD Library"           } },
+  reporting:       { label: "CPD Reporting",           parent: null },
+  myEducation:     { label: "My Completed Education",  parent: null },
+  completedDetail: { label: "Combine Assessment",      parent: { id: "dashboard", label: "My Completed Education" } },
+  profile:         { label: "Account Settings",        parent: null },
+  upload:          { label: "Upload CPD",              parent: null },
 };
 
 interface HeaderProps {

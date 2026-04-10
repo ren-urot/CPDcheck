@@ -65,7 +65,7 @@ export const subCategories: SubCategory[] = [
   { id: "securities",        label: "Securities",               earned: null },
   { id: "social-security",   label: "Social Security",          earned: null },
   { id: "compliance",        label: "Compliance",               earned: 0.50 },
-  { id: "retirement2",       label: "Retirement",               earned: 0.25 },
+  { id: "retirement2",       label: "Managed investments",      earned: 0.25 },
   { id: "estate-planning",   label: "Estate planning",          earned: null },
   { id: "taxation",          label: "Taxation",                 earned: null },
   { id: "general-knowledge", label: "General knowledge",        earned: 0.25 },
